@@ -6,6 +6,7 @@
 #include <linux/fs.h>             // Header for the Linux file system support
 #include <linux/uaccess.h>          // Required for the copy to user function
 #include "test.h"
+#include <linux/slab.h>
 #define  DEVICE_NAME "ebbchar"    ///< The device will appear at /dev/ebbchar using this value
 #define  CLASS_NAME  "ebb"        ///< The device class -- this is a character device driver
 
@@ -33,7 +34,7 @@ static struct class* decryptClass = NULL;
 static struct device* encryptDevice;
 static struct device* decryptDevice;
 static int devicecount = 0;
-static char *key;
+static char key[1000] = {0};
 static int i;
  
 // The prototype functions for the character driver -- must come before the struct definition
@@ -73,9 +74,7 @@ static long my_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 		case CREATE:
 			//do stuff
 			printk(KERN_ALERT "CREATE\n");
-			copy_from_user(&q, (query_arg_t *)arg, sizeof(query_arg_t));
-			key = kmalloc(sizeof(char)*strlen(q.key), GFP_KERNEL);
-			strcpy(key, q.key);
+
 			sprintf(locatione, "encrypt%d", devicecount);
 			sprintf(locationd, "decrypt%d", devicecount);
 			majorEncrypt = register_chrdev(0, locatione, &fops);
@@ -112,6 +111,8 @@ static long my_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 				printk(KERN_ALERT "Failed to create the device\n");
 				return PTR_ERR(encryptDevice);
 			}
+			copy_from_user(&q, (query_arg_t *)arg, sizeof(query_arg_t));
+			strcpy(key, q.key);
    			printk(KERN_INFO "EBBChar: device class created correctly\n"); // Made it! device was initialized
 			//devicecount++;
 			break;
@@ -133,13 +134,12 @@ static long my_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 		case CHANGE_KEY:
 			printk(KERN_ALERT "CHANGE_KEY\n");
 			copy_from_user(&q, (query_arg_t *)arg, sizeof(query_arg_t));
-			key = q.key;
-			q.key = key;
-			copy_to_user((query_arg_t *)arg, &q, sizeof(query_arg_t));
+			strcpy(key, q.key);
 			break;
 		case ENCRYPT:
 			printk(KERN_ALERT "ENCRYPT\n");
-			q.key = key;
+			//q.key = kmalloc (sizeof(char) * strlen(key), GFP_USER);
+			strcpy(q.key, key);
 			copy_to_user((query_arg_t *)arg, &q, sizeof(query_arg_t));
 			break;
 		case DECRYPT:

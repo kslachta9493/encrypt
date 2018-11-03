@@ -854,6 +854,14 @@ deps_/home/superuser/encrypt/test.o := \
   arch/x86/include/asm/extable.h \
   arch/x86/include/asm/uaccess_64.h \
   /home/superuser/encrypt/test.h \
+  include/linux/slab.h \
+    $(wildcard include/config/debug/slab.h) \
+    $(wildcard include/config/failslab.h) \
+    $(wildcard include/config/have/hardened/usercopy/allocator.h) \
+    $(wildcard include/config/slab.h) \
+    $(wildcard include/config/slub.h) \
+  include/linux/kmemleak.h \
+  include/linux/kasan.h \
 
 /home/superuser/encrypt/test.o: $(deps_/home/superuser/encrypt/test.o)
 
