@@ -34,6 +34,7 @@ static struct device* encryptDevice;
 static struct device* decryptDevice;
 static int devicecount = 0;
 static char *key;
+static int i;
  
 // The prototype functions for the character driver -- must come before the struct definition
 static int     dev_open(struct inode *, struct file *);
@@ -73,7 +74,8 @@ static long my_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 			//do stuff
 			printk(KERN_ALERT "CREATE\n");
 			copy_from_user(&q, (query_arg_t *)arg, sizeof(query_arg_t));
-			key = q.key + devicecount + 1;
+			key = kmalloc(sizeof(char)*strlen(q.key), GFP_KERNEL);
+			strcpy(key, q.key);
 			sprintf(locatione, "encrypt%d", devicecount);
 			sprintf(locationd, "decrypt%d", devicecount);
 			majorEncrypt = register_chrdev(0, locatione, &fops);
@@ -137,6 +139,8 @@ static long my_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 			break;
 		case ENCRYPT:
 			printk(KERN_ALERT "ENCRYPT\n");
+			q.key = key;
+			copy_to_user((query_arg_t *)arg, &q, sizeof(query_arg_t));
 			break;
 		case DECRYPT:
 			printk(KERN_ALERT "DECRYPT\n");
@@ -233,8 +237,12 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
  *  @param offset The offset if required
  */
 static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset){
-   sprintf(message, "%s(%zu letters)", buffer, len);   // appending received string with its length
+   sprintf(message, "%s", buffer);   // appending received string with its length
    size_of_message = strlen(message);                 // store the length of the stored message
+	for (i= 0; i < size_of_message; i++)
+	{
+		message[i] = (message[i] + key[i]) % 127;
+	}
    printk(KERN_INFO "EBBChar: Received %zu characters from the user\n", len);
    return len;
 }
